@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Drawkie Talkie</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f5f2ed;
+      --surface: #ffffff;
+      --text: #1a1a1a;
+      --text-muted: #888;
+      --border: #ddd;
+      --accent: #1a1a1a;
+      --green: #2d6a4f;
+      --red: #c1121f;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px;
+      gap: 12px;
+    }
+
+    header {
+      width: 100%;
+      max-width: 440px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 0;
+    }
+
+    .logo {
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text);
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: 'DM Mono', monospace;
+    }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #ccc;
+      transition: background 0.3s;
+    }
+    .dot.ok { background: #2d6a4f; }
+    .dot.err { background: #c1121f; }
+    .dot.pulse {
+      background: #f4a261;
+      animation: pulse 0.8s infinite alternate;
+    }
+    @keyframes pulse { from { opacity: 1; } to { opacity: 0.3; } }
+
+    #canvas-wrap {
+      width: 100%;
+      max-width: 440px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      touch-action: none;
+      cursor: crosshair;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    }
+
+    canvas { display: block; width: 100%; }
+
+    .toolbar {
+      width: 100%;
+      max-width: 440px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+
+    .row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .color-swatch {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      border: 2.5px solid transparent;
+      cursor: pointer;
+      transition: transform 0.15s, border-color 0.15s;
+      flex-shrink: 0;
+    }
+    .color-swatch:hover { transform: scale(1.18); }
+    .color-swatch.active { border-color: var(--text); }
+
+    .divider {
+      width: 1px;
+      height: 22px;
+      background: var(--border);
+    }
+
+    .pill {
+      padding: 5px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      font-size: 12px;
+      font-family: 'DM Mono', monospace;
+      cursor: pointer;
+      color: var(--text);
+      transition: background 0.12s, color 0.12s;
+    }
+    .pill:hover { background: #eee; }
+    .pill.active {
+      background: var(--text);
+      color: #fff;
+      border-color: var(--text);
+    }
+
+    .label {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: 'DM Mono', monospace;
+    }
+
+    #send-btn {
+      width: 100%;
+      max-width: 440px;
+      padding: 14px;
+      background: var(--text);
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      font-size: 14px;
+      font-weight: 500;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer;
+      letter-spacing: 0.02em;
+      transition: opacity 0.15s, transform 0.1s, background 0.2s;
+    }
+    #send-btn:hover { opacity: 0.88; }
+    #send-btn:active { transform: scale(0.98); }
+    #send-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    #send-btn.ok-state { background: var(--green); }
+    #send-btn.err-state { background: var(--red); }
+
+    #feedback {
+      font-size: 11px;
+      font-family: 'DM Mono', monospace;
+      color: var(--text-muted);
+      text-align: center;
+      min-height: 14px;
+    }
+
+    details {
+      width: 100%;
+      max-width: 440px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px 14px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+
+    summary {
+      font-size: 12px;
+      font-family: 'DM Mono', monospace;
+      color: var(--text-muted);
+      cursor: pointer;
+      user-select: none;
+      list-style: none;
+    }
+    summary::after {
+      content: ' ▾';
+      font-size: 10px;
+    }
+    details[open] summary::after { content: ' ▴'; }
+
+    .config-fields {
+      margin-top: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .config-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .config-label {
+      font-size: 11px;
+      font-family: 'DM Mono', monospace;
+      color: var(--text-muted);
+      width: 90px;
+      flex-shrink: 0;
+    }
+
+    .config-input {
+      flex: 1;
+      font-size: 12px;
+      font-family: 'DM Mono', monospace;
+      padding: 7px 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg);
+      color: var(--text);
+      outline: none;
+    }
+    .config-input:focus { border-color: var(--text); }
+
+    .save-btn {
+      margin-top: 4px;
+      align-self: flex-end;
+      padding: 6px 16px;
+      background: var(--text);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 12px;
+      font-family: 'DM Mono', monospace;
+      cursor: pointer;
+    }
+
+    .hint {
+      margin-top: 6px;
+      font-size: 10px;
+      font-family: 'DM Mono', monospace;
+      color: #bbb;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <span class="logo">Drawkie Talkie</span>
+    <span class="status">
+      <span class="dot" id="dot"></span>
+      <span id="status-txt">sin configurar</span>
+    </span>
+  </header>
+
+  <div id="canvas-wrap">
+    <canvas id="canvas"></canvas>
+  </div>
+
+  <div class="toolbar">
+    <div class="row">
+      <button class="color-swatch active" style="background:#1a1a1a" data-color="#1a1a1a"></button>
+      <button class="color-swatch" style="background:#c1121f" data-color="#c1121f"></button>
+      <button class="color-swatch" style="background:#2196f3" data-color="#2196f3"></button>
+      <button class="color-swatch" style="background:#2d6a4f" data-color="#2d6a4f"></button>
+      <button class="color-swatch" style="background:#f4a261" data-color="#f4a261"></button>
+      <button class="color-swatch" style="background:#9b59b6" data-color="#9b59b6"></button>
+      <button class="color-swatch" style="background:#e91e8c" data-color="#e91e8c"></button>
+      <div class="divider"></div>
+      <button class="pill" id="eraser-btn">borrar</button>
+      <button class="pill" id="clear-btn">limpiar</button>
+    </div>
+    <div class="row">
+      <span class="label">grosor</span>
+      <button class="pill active" data-size="3">S</button>
+      <button class="pill" data-size="7">M</button>
+      <button class="pill" data-size="14">L</button>
+      <button class="pill" data-size="26">XL</button>
+    </div>
+  </div>
+
+  <button id="send-btn" disabled>enviar dibujo</button>
+  <div id="feedback"></div>
+
+  <details>
+    <summary>configuración de Firebase</summary>
+    <div class="config-fields">
+      <div class="config-row">
+        <span class="config-label">URL Firebase</span>
+        <input class="config-input" id="fb-url" placeholder="https://tu-proyecto-default-rtdb.firebaseio.com" />
+      </div>
+      <div class="config-row">
+        <span class="config-label">Canal</span>
+        <input class="config-input" id="fb-canal" value="canal_AB" placeholder="canal_AB" />
+      </div>
+      <button class="save-btn" id="save-btn">guardar</button>
+      <p class="hint">
+        La URL la encuentras en Firebase → Realtime Database.<br>
+        Se ve así: https://mi-proyecto-default-rtdb.firebaseio.com<br>
+        Sin la diagonal "/" al final.
+      </p>
+    </div>
+  </details>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const wrap = document.getElementById('canvas-wrap');
+
+    function resizeCanvas() {
+      const w = wrap.clientWidth;
+      const h = Math.round(w * 0.75);
+      canvas.width = w;
+      canvas.height = h;
+      canvas.style.height = h + 'px';
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, w, h);
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+    }
+    resizeCanvas();
+    window.addEventListener('resize', () => { resizeCanvas(); });
+
+    let drawing = false;
+    let color = '#1a1a1a';
+    let size = 3;
+    let erasing = false;
+    let strokes = [];
+    let cur = [];
+    let fbUrl = localStorage.getItem('fb-url') || '';
+    let fbCanal = localStorage.getItem('fb-canal') || 'canal_AB';
+    let hasDrawn = false;
+
+    if (fbUrl) {
+      document.getElementById('fb-url').value = fbUrl;
+      document.getElementById('fb-canal').value = fbCanal;
+      setStatus('ok', 'listo');
+    }
+
+    function getPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const src = e.touches ? e.touches[0] : e;
+      return {
+        x: Math.round((src.clientX - rect.left) * scaleX),
+        y: Math.round((src.clientY - rect.top) * scaleY)
+      };
+    }
+
+    function startDraw(e) {
+      e.preventDefault();
+      drawing = true;
+      const p = getPos(e);
+      cur = [p];
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+    }
+
+    function moveDraw(e) {
+      e.preventDefault();
+      if (!drawing) return;
+      const p = getPos(e);
+      cur.push(p);
+      ctx.strokeStyle = erasing ? '#ffffff' : color;
+      ctx.lineWidth = erasing ? size * 2.5 : size;
+      ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+    }
+
+    function endDraw(e) {
+      if (!drawing) return;
+      drawing = false;
+      if (cur.length > 0) {
+        strokes.push({ pts: cur, color: erasing ? null : color, size, erase: erasing });
+        hasDrawn = true;
+        document.getElementById('send-btn').disabled = false;
+      }
+      cur = [];
+    }
+
+    canvas.addEventListener('mousedown', startDraw);
+    canvas.addEventListener('mousemove', moveDraw);
+    canvas.addEventListener('mouseup', endDraw);
+    canvas.addEventListener('mouseleave', endDraw);
+    canvas.addEventListener('touchstart', startDraw, { passive: false });
+    canvas.addEventListener('touchmove', moveDraw, { passive: false });
+    canvas.addEventListener('touchend', endDraw);
+
+    document.querySelectorAll('.color-swatch').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.color-swatch').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        color = btn.dataset.color;
+        erasing = false;
+        document.getElementById('eraser-btn').classList.remove('active');
+      });
+    });
+
+    document.querySelectorAll('[data-size]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('[data-size]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        size = parseInt(btn.dataset.size);
+      });
+    });
+
+    document.getElementById('eraser-btn').addEventListener('click', function () {
+      erasing = !erasing;
+      this.classList.toggle('active', erasing);
+    });
+
+    document.getElementById('clear-btn').addEventListener('click', () => {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      strokes = [];
+      hasDrawn = false;
+      document.getElementById('send-btn').disabled = true;
+      setFeedback('');
+    });
+
+    document.getElementById('save-btn').addEventListener('click', () => {
+      const url = document.getElementById('fb-url').value.trim().replace(/\/$/, '');
+      const canal = document.getElementById('fb-canal').value.trim() || 'canal_AB';
+      if (!url.startsWith('https://')) {
+        setStatus('err', 'url inválida');
+        setFeedback('La URL debe empezar con https://');
+        return;
+      }
+      fbUrl = url;
+      fbCanal = canal;
+      localStorage.setItem('fb-url', fbUrl);
+      localStorage.setItem('fb-canal', fbCanal);
+      setStatus('ok', 'listo');
+      setFeedback('Firebase configurado ✓');
+    });
+
+    document.getElementById('send-btn').addEventListener('click', async () => {
+      if (!fbUrl) {
+        setFeedback('Primero configura tu URL de Firebase abajo');
+        document.querySelector('details').open = true;
+        return;
+      }
+      if (!hasDrawn) return;
+
+      const btn = document.getElementById('send-btn');
+      btn.textContent = 'enviando...';
+      btn.disabled = true;
+      setStatus('pulse', 'enviando');
+
+      const payload = {
+        trazos: strokes,
+        ancho: canvas.width,
+        alto: canvas.height,
+        timestamp: Date.now(),
+        estado: 'nuevo'
+      };
+
+      try {
+        const res = await fetch(`${fbUrl}/${fbCanal}.json`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+
+        btn.textContent = '¡enviado!';
+        btn.classList.add('ok-state');
+        setStatus('ok', 'enviado');
+        setFeedback('el dibujo llegó — se borrará en 30 seg');
+
+        setTimeout(async () => {
+          try { await fetch(`${fbUrl}/${fbCanal}.json`, { method: 'DELETE' }); } catch (_) {}
+        }, 30000);
+
+        setTimeout(() => {
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          strokes = [];
+          hasDrawn = false;
+          btn.textContent = 'enviar dibujo';
+          btn.classList.remove('ok-state');
+          btn.disabled = true;
+          setFeedback('');
+          setStatus('ok', 'listo');
+        }, 2500);
+
+      } catch (err) {
+        btn.textContent = 'enviar dibujo';
+        btn.classList.add('err-state');
+        btn.disabled = false;
+        setStatus('err', 'error');
+        setFeedback('Error: revisa tu URL de Firebase · ' + err.message);
+        setTimeout(() => btn.classList.remove('err-state'), 2000);
+      }
+    });
+
+    function setStatus(type, txt) {
+      const dot = document.getElementById('dot');
+      dot.className = 'dot';
+      if (type === 'ok') dot.classList.add('ok');
+      if (type === 'err') dot.classList.add('err');
+      if (type === 'pulse') dot.classList.add('pulse');
+      document.getElementById('status-txt').textContent = txt;
+    }
+
+    function setFeedback(msg) {
+      document.getElementById('feedback').textContent = msg;
+    }
+  </script>
+</body>
+</html>
